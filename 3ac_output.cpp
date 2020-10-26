@@ -13,12 +13,25 @@ IRProgram * ProgramNode::to3AC(TypeAnalysis * ta){
 //VarDeclNode at bottom
 
 void FnDeclNode::to3AC(IRProgram * prog){
-	//TODO(Implement me)
-	//unfinished
-	Procedure * proc = new Procedure(prog, myID);
-	for (auto formals : *myFormals) {
-		formals->to3AC(proc);
+    // makes a new procedure for function declarations
+	Procedure * fnProc = prog->makeProc(myID->getName());
+	size_t i = 1;
+	// loops over all formals calling to 3AC on all formals
+	for (auto formals : *myFormals){
+	    formals->to3AC(fnProc);
+	    // gets the symbol from the procedure with the coresponding semantic symbol
+	    auto form = fnProc->getSymOpd(formals->ID()->getSymbol());
+	    // creates an arg quad for each argument using the formal symbol and an index
+	    auto arg = new GetArgQuad(i,form);
+	    // adds the quad to the procedure
+	    fnProc -> addQuad(arg);
+	    i++;
+
 	}
+	// recurses into the body
+	for (auto body : *myBody){
+	    body->to3AC(fnProc);
+	}	
 }
 
 void FnDeclNode::to3AC(Procedure * proc){
@@ -27,12 +40,13 @@ void FnDeclNode::to3AC(Procedure * proc){
 	// inheritance needs
 }
 
+// throw InternalError
 void FormalDeclNode::to3AC(IRProgram * prog){
-	//TODO(Implement me)
+	throw new InternalError("function not well formed");
 }
 
 void FormalDeclNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+	proc->gatherFormal(this->ID()->getSymbol());
 }
 
 Opd * IntLitNode::flatten(Procedure * proc){
@@ -44,126 +58,197 @@ Opd * StrLitNode::flatten(Procedure * proc){
 	return res;
 }
 
-Opd * CharLitNode::flatten(Procedure * proc){ //test
+Opd * CharLitNode::flatten(Procedure * proc){ 
+        //test
 	//TODO(Implement me)
 	return new LitOpd(std::to_string(myVal), ADDR);
 }
 
+// Optional
 Opd * NullPtrNode::flatten(Procedure * proc){
 	return new LitOpd("0", ADDR);
-	//TODO(Implement me)
 }
 
 Opd * TrueNode::flatten(Procedure * prog){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
 Opd * FalseNode::flatten(Procedure * prog){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
 Opd * AssignExpNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+    // call flatten on dst and src
+    auto dst = myDst->flatten(proc);
+    auto src = mySrc->flatten(proc);
+    // create an assign quad
+    auto assign = new AssignQuad(dst,src);
+
+    proc->addQuad(assign);
+    return src;
 }
 
+// No implementation needed
 Opd * LValNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
+// optional 
 Opd * DerefNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
+// optional
 Opd * RefNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
 Opd * CallExpNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	TODO(Implement me)
 }
 
 Opd * NegNode::flatten(Procedure * proc){
-	//TODO(Implement me)
-	UnaryOp un = NEG;
-	return un;
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp->flatten(proc);
+	UnaryOp UnOp = NEG;
+	UnaryOpQuad * myQuad =  new UnaryOpQuad(destination, UnOp, exp1);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * NotNode::flatten(Procedure * proc){
-	//TODO(Implement me)
-	UnaryOp un = NOT;
-	return un;
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp->flatten(proc);
+	UnaryOp UnOp = NOT;
+	UnaryOpQuad * myQuad =  new UnaryOpQuad(destination, UnOp, exp1);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * PlusNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = ADD;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * MinusNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = SUB;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * TimesNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = MULT;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * DivideNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(QUADWORD);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = DIV;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * AndNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = AND;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * OrNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = OR;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
+//TODO finish deciding on the desination
 Opd * EqualsNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+    // if exp1 is bool or char destination is BYTE
+	auto destination = proc->makeTmp(QUADWORD);
+    //else destination is QUADWORD
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = EQ;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
+//TODO finish deciding on the desination
 Opd * NotEqualsNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+    // if exp1 is bool or char destination is BYTE
+	auto destination = proc->makeTmp(QUADWORD);
+    //else destination is QUADWORD
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = NEQ;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * LessNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = LT;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * GreaterNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = GT;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * LessEqNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = LTE;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 Opd * GreaterEqNode::flatten(Procedure * proc){
-	//TODO(Implement me)
+	auto destination = proc->makeTmp(BYTE);
+	auto exp1 = myExp1->flatten(proc);
+	auto exp2 = myExp2->flatten(proc);
 	BinOp bin = GTE;
-	return bin;
+	BinOpQuad * myQuad =  new BinOpQuad(destination, bin, exp1, exp2);
+	proc->addQuad(myQuad);
+	return destination;
 }
 
 void AssignStmtNode::to3AC(Procedure * proc){
@@ -229,7 +314,9 @@ void VarDeclNode::to3AC(IRProgram * prog){
 //We only get to this node if we are in a stmt
 // context (DeclNodes protect descent) 
 Opd * IDNode::flatten(Procedure * proc){
-	TODO(Implement me)
+    // return opd pointer to the semantic symbol stored in IDNode
+    auto opd = proc->getSymOpd(mySymbol);
+    return opd;
 }
 
 

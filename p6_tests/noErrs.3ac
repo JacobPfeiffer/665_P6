@@ -1,0 +1,14 @@
+[BEGIN GLOBALS]
+[END GLOBALS]
+[BEGIN fn LOCALS]
+b (formal)
+a (local)
+tmp0 (tmp)
+[END fn LOCALS]
+lbl_fun_fn: enter fn
+getarg 1 b
+a := 4
+tmp0 := a SUB64 2
+a := tmp0
+lbl_0: leave fn
+

@@ -1,14 +1,24 @@
 [BEGIN GLOBALS]
+a
 [END GLOBALS]
+[BEGIN p LOCALS]
+a (formal)
+[END p LOCALS]
+lbl_fun_p: enter p
+getarg 1 a
+a := a ADD64 1
+lbl_0: leave p
 [BEGIN fn LOCALS]
 b (formal)
-a (local)
+c (formal)
 tmp0 (tmp)
 [END fn LOCALS]
 lbl_fun_fn: enter fn
 getarg 1 b
-a := 4
-tmp0 := a SUB64 2
-a := tmp0
-lbl_0: leave fn
+getarg 2 c
+setarg 1 b
+call p
+getret tmp0
+c := tmp0
+lbl_1: leave fn
 

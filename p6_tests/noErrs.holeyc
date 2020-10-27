@@ -1,5 +1,8 @@
-int fn(int b){
-	int a;
-	a = 4;
-	a = a-2;
+int a;
+int p(int a){
+    a++;
+}
+
+int fn(int b, int c){
+    c=p(b);
 }

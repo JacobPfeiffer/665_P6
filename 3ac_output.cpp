@@ -59,8 +59,6 @@ Opd * StrLitNode::flatten(Procedure * proc){
 }
 
 Opd * CharLitNode::flatten(Procedure * proc){ 
-        //test
-	//TODO(Implement me)
 	return new LitOpd(std::to_string(myVal), ADDR);
 }
 
@@ -70,11 +68,11 @@ Opd * NullPtrNode::flatten(Procedure * proc){
 }
 
 Opd * TrueNode::flatten(Procedure * prog){
-	TODO(Implement me)
+	return new LitOpd("1", BYTE);
 }
 
 Opd * FalseNode::flatten(Procedure * prog){
-	TODO(Implement me)
+	return new LitOpd("0", BYTE);
 }
 
 Opd * AssignExpNode::flatten(Procedure * proc){
@@ -103,8 +101,30 @@ Opd * RefNode::flatten(Procedure * proc){
 	TODO(Implement me)
 }
 
+//TODO needs to be completed
 Opd * CallExpNode::flatten(Procedure * proc){
-	TODO(Implement me)
+    auto calleeIn = myID->getSymbol();
+    auto call = new CallQuad(calleeIn);
+
+    size_t i = 1;	
+    for(auto args : *myArgs){
+	auto flat = args->flatten(proc);
+	auto saq = new SetArgQuad(i,flat);
+	proc->addQuad(saq);
+	i++;
+    }
+    proc->addQuad(call);
+
+    auto itsVoid = calleeIn->getDataType()->asFn()->getReturnType()->isVoid();
+    if(!itsVoid){
+	auto tmp = proc->makeTmp(QUADWORD);
+	auto ret = new GetRetQuad(tmp);
+	proc->addQuad(ret);
+	return tmp;
+    }
+    else{
+	return nullptr;
+    }
 }
 
 Opd * NegNode::flatten(Procedure * proc){
@@ -252,46 +272,113 @@ Opd * GreaterEqNode::flatten(Procedure * proc){
 }
 
 void AssignStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
 	myExp->flatten(proc);
 }
 
 void PostIncStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
-	myLVal->flatten(proc);
+   auto lval = myLVal->flatten(proc);
+   auto one = new LitOpd("1",QUADWORD);
+   auto bin = new BinOpQuad(lval,ADD, lval,one );
+    proc->addQuad(bin);
+
 }
 
 void PostDecStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
-	myLVal->flatten(proc);
+   auto lval = myLVal->flatten(proc);
+   auto one = new LitOpd("1",QUADWORD);
+   auto bin = new BinOpQuad(lval,SUB, lval,one );
+    proc->addQuad(bin);
 }
 
 void FromConsoleStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto dst = myDst->flatten(proc);
+    auto trins = new IntrinsicQuad(OUTPUT,dst);
+    proc->addQuad(trins);
 }
 
 void ToConsoleStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto src = mySrc->flatten(proc);
+    auto trins = new IntrinsicQuad(INPUT,src);
+    proc->addQuad(trins);
 }
 
 void IfStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto cond = myCond->flatten(proc);
+    auto lbl = proc->makeLabel();
+    auto jq = new JmpIfQuad(cond,lbl);
+    proc->addQuad(jq);
+    for(auto stmt : *myBody){
+	stmt->to3AC(proc);
+    }
+    auto nop = new NopQuad();
+    nop->addLabel(lbl);
+    proc->addQuad(nop);
+    
 }
 
 void IfElseStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto cond = myCond->flatten(proc);
+    auto lbl = proc->makeLabel();
+    auto jq = new JmpIfQuad(cond,lbl);
+    proc->addQuad(jq);
+    for(auto stmt : *myBodyTrue){
+	stmt->to3AC(proc);
+    }
+    // if condition is true jump to nop
+    auto nop = new NopQuad();
+    nop->addLabel(lbl);
+
+    auto lbl2 = proc->makeLabel();
+    // else evaluate the else
+    auto jmp = new JmpQuad(lbl2);
+    proc->addQuad(jmp);
+    proc->addQuad(nop);
+
+    for(auto stmt : *myBodyFalse){
+	stmt->to3AC(proc);
+    }
+    auto nop2 = new NopQuad();
+    nop2->addLabel(lbl2);
+    proc->addQuad(nop2);
+
 }
 
 void WhileStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto lbl = proc->makeLabel();
+    auto lbl2 = proc->makeLabel();
+
+    auto nop = new NopQuad();
+    nop->addLabel(lbl);
+    proc->addQuad(nop);
+
+    auto cond = myCond->flatten(proc);
+
+    auto jq = new JmpIfQuad(cond,lbl2);
+    proc->addQuad(jq);
+    for(auto stmt : *myBody){
+	stmt->to3AC(proc);
+    }
+
+    auto jmp = new JmpQuad(lbl);
+    proc->addQuad(jmp);
+
+    auto nop2 = new NopQuad();
+    nop2->addLabel(lbl2);
+    proc->addQuad(nop2);
 }
 
 void CallStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    myCallExp->flatten(proc);
 }
 
 void ReturnStmtNode::to3AC(Procedure * proc){
-	//TODO(Implement me)
+    auto exp = myExp->flatten(proc);
+    auto sret = new SetRetQuad(exp);
+    proc->addQuad(sret);
+    //goto proc->getLeaveLabel
+    auto jmp = new JmpQuad(proc->getLeaveLabel());
+    proc->addQuad(jmp);
+	
 }
 
 void VarDeclNode::to3AC(Procedure * proc){
